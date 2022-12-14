@@ -26,6 +26,7 @@ productRouter.get("/", async (req, res) => {
         .skip(skip);
     } else {
       products = await ProductModel.find()
+        .populate("adminId")
         .sort({ ratings: -1 })
         .limit(limit ? limit : 10)
         .skip(skip ? skip : 0);

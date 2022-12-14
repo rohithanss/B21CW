@@ -6,6 +6,8 @@ require("dotenv").config();
 const tokenValidator = require("../middlewares/tokenAuth");
 const { AdminModel } = require("../models/AdminModel");
 const { ProductModel } = require("../models/ProductModel");
+const { OrderModel } = require("../models/OrderModel");
+const { UserModel } = require("../models/UserModel");
 
 const adminRouter = Router();
 
@@ -13,7 +15,7 @@ adminRouter.post("/login", async (req, res) => {
   let payload = req.body;
 
   let admin = await AdminModel.findOne({ email: payload.email });
-  if (!admin.email) {
+  if (admin == null) {
     res.send({ msg: "Wrong Credentials", status: "fail" });
   } else {
     try {
@@ -47,10 +49,6 @@ adminRouter.post("/login", async (req, res) => {
 
 adminRouter.use(tokenValidator);
 
-adminRouter.get("/orders", (req, res) => {
-  res.send({ orders: [], customers: [], status: "success" });
-});
-
 adminRouter.get("/myprofile", async (req, res) => {
   try {
     let profile = await AdminModel.findOne({ _id: req.body.authId });
@@ -62,13 +60,63 @@ adminRouter.get("/myprofile", async (req, res) => {
   }
 });
 
+// --------------------ORDERS ENDPOINTS
+
+adminRouter.get("/orders", async (req, res) => {
+  const adminId = req.body.authId;
+  let limit = req.query.limit || null;
+  let skip = (req.query.page - 1) * limit;
+  let orderStatus = req.query.status;
+  // let sort = req.query.sort || -1;
+  console.log(orderStatus);
+  try {
+    let orders = await OrderModel.find({
+      $and: [{ adminId }, { orderStatus: { $regex: orderStatus } }],
+    })
+      // .sort({ updatedAt: sort })
+      .limit(limit)
+      .skip(skip)
+      .populate("productId");
+    // console.log(orders, "dfgd");
+    res.send({ orders, status: "success" });
+  } catch {
+    res.send({ msg: "Error while fetching orders", status: "error" });
+  }
+});
+
+adminRouter.patch("/orders/:orderId", async (req, res) => {
+  let orderStatus = req.query.status;
+  let _id = req.params.orderId;
+  try {
+    await OrderModel.findByIdAndUpdate({ _id }, { orderStatus });
+    res.send({ msg: "order status updated successfully", status: "success" });
+  } catch (err) {
+    res.send({ msg: "error while updating the order status", status: "error" });
+  }
+});
+
+adminRouter.get("/customer/:userID", async (req, res) => {
+  let userID = req.params.userID;
+  try {
+    let customer = await UserModel.findById({ _id: userID });
+    // console.log(customer);
+    res.send({
+      full_name: customer.name,
+      email: customer.email,
+      status: "success",
+    });
+  } catch (err) {
+    res.send({ msg: "error while fetching customer details", status: "error" });
+  }
+});
+// --------------------PRODUCTS ENDPOINTS
+
 adminRouter.get("/products", async (req, res) => {
   let limit = req.query.limit || null;
   let skip = (req.query.page - 1) * limit;
-  let start = skip + 1;
-  let end = +skip + +limit;
+
   try {
-    let products = await ProductModel.find({ authId: req.body.authId })
+    let products = await ProductModel.find({ adminId: req.body.authId })
       .limit(limit)
       .skip(skip);
     let totalProducts = await ProductModel.countDocuments();
@@ -76,8 +124,6 @@ adminRouter.get("/products", async (req, res) => {
       status: "success",
       products,
       totalProducts,
-      start,
-      end: end == 0 ? totalProducts : end,
     });
   } catch (err) {
     console.log(err);

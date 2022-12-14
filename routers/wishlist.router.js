@@ -1,6 +1,6 @@
 const { Router } = require("express");
 
-const { ProductModel } = require("../models/ProductModel");
+const { UserModel } = require("../models/UserModel");
 const { WishlistModel } = require("../models/WishlistModel");
 const tokenValidator = require("../middlewares/tokenAuth");
 
@@ -10,26 +10,19 @@ wishlistRouter.use(tokenValidator);
 
 wishlistRouter.post("/add/:productId", async (req, res) => {
   let productId = req.params.productId;
-
+  let userId = req.body.authId;
   try {
-    let product = await ProductModel.findById({ _id: productId });
-    let wishlistItem = new WishlistModel();
-    wishlistItem.userId = req.body.authId;
-    wishlistItem.title = product.title;
-    wishlistItem.price = product.price;
-    wishlistItem.otherImages = product.otherImages;
-    wishlistItem.soldBy = product.soldBy;
-    wishlistItem.adminId = product.adminId;
-    wishlistItem.image = product.image;
-    wishlistItem.category = product.category;
-    wishlistItem.productId = product._id;
-    wishlistItem.ratings = product.ratings;
-    await wishlistItem.save();
+    let item = await WishlistModel.create({ productId, userId });
+    await UserModel.findByIdAndUpdate(
+      { _id: userId },
+      { $push: { wishlist: item._id } }
+    );
     res.send({
       msg: "Product added to wishlist successfully",
       status: "success",
     });
   } catch (err) {
+    console.log(err);
     res.send({
       msg: "Error while adding product to the wishlist, try again later",
       status: "error",
@@ -41,7 +34,7 @@ wishlistRouter.get("/", async (req, res) => {
   const userId = req.body.authId;
 
   try {
-    let wishlist = await WishlistModel.find({ userId });
+    let wishlist = await WishlistModel.find({ userId }).populate("productId");
 
     res.send({ status: "success", data: wishlist });
   } catch (err) {

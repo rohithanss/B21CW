@@ -1,5 +1,6 @@
 const { Router } = require("express");
 
+const { UserModel } = require("../models/UserModel");
 const { ProductModel } = require("../models/ProductModel");
 const { CartModel } = require("../models/CartModel");
 const tokenValidator = require("../middlewares/tokenAuth");
@@ -10,26 +11,24 @@ cartRouter.use(tokenValidator);
 
 cartRouter.post("/add/:productId", async (req, res) => {
   let productId = req.params.productId;
+  let userId = req.body.authId;
   let quantity = req.query.quantity;
 
   try {
-    let product = await ProductModel.findById({ _id: productId });
-    // console.log(product);
-    let cartItem = new CartModel({ quantity });
+    let { price } = await ProductModel.findById({ _id: productId });
+    totalPrice = price * quantity;
+    let cartItem = await CartModel.create({
+      quantity,
+      totalPrice,
+      productId,
+      userId,
+    });
 
-    cartItem.userId = req.body.authId;
-    cartItem.title = product.title;
-    cartItem.price = product.price;
-    cartItem.otherImages = product.otherImages;
-    cartItem.soldBy = product.soldBy;
-    cartItem.adminId = product.adminId;
-    cartItem.image = product.image;
-    cartItem.category = product.category;
-    cartItem.ratings = product.ratings;
-    cartItem.productId = product._id;
+    await UserModel.findByIdAndUpdate(
+      { _id: userId },
+      { $push: { cart: cartItem._id } }
+    );
 
-    cartItem.totalPrice = product.price * quantity;
-    let resp = await cartItem.save();
     res.send({ msg: "Product added to cart successfully", status: "success" });
   } catch (err) {
     res.send({
@@ -43,7 +42,7 @@ cartRouter.get("/", async (req, res) => {
   const userId = req.body.authId;
 
   try {
-    let cart = await CartModel.find({ userId });
+    let cart = await CartModel.find({ userId }).populate("productId");
     res.send({ status: "success", data: cart });
   } catch (err) {
     res.send({ msg: "error while fetching cart items", status: "error" });
@@ -58,7 +57,6 @@ cartRouter.patch("/update/:cartId", async (req, res) => {
     let item = await CartModel.findOne({ _id: cartId, userId });
     if (item != null) {
       let totalPrice = (item.totalPrice / item.quantity) * quantity;
-      console.log(totalPrice);
       await CartModel.findByIdAndUpdate(
         { _id: cartId },
         { totalPrice, quantity }

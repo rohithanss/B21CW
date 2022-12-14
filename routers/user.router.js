@@ -78,15 +78,18 @@ userRouter.post("/login", async (req, res) => {
 
 userRouter.use(tokenValidator);
 
-// userRouter.get("/orders", (req, res) => {
-//   res.send({ orders: [], customers: [], status: "success" });
-// });
-
 userRouter.get("/myprofile", async (req, res) => {
   try {
-    let profile = await UserModel.findOne({ _id: req.body.authId });
+    let profile = await UserModel.findOne({ _id: req.body.authId }).populate(
+      "cart"
+    );
+    // await profile.cart[0].populate("productId");
 
-    res.send({ full_name: profile.name, email: profile.email });
+    res.send({
+      full_name: profile.name,
+      email: profile.email,
+      data: profile.cart,
+    });
   } catch (err) {
     console.log(err);
     res.send({ msg: "Error at fetching profile", status: "error" });

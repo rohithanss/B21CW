@@ -3,6 +3,8 @@ const { Router } = require("express");
 const { OrderModel } = require("../models/OrderModel");
 const { CartModel } = require("../models/CartModel");
 const { ProductModel } = require("../models/ProductModel");
+const { UserModel } = require("../models/UserModel");
+const { AdminModel } = require("../models/AdminModel");
 const tokenValidator = require("../middlewares/tokenAuth");
 
 const orderRouter = Router();
@@ -13,23 +15,27 @@ orderRouter.post("/place", async function (req, res) {
 
   try {
     let cartItems = await CartModel.find({ userId });
-    cartItems.forEach((product) => {
-      let orderItem = new OrderModel();
-      orderItem.userId = req.body.authId;
-      orderItem.title = product.title;
-      orderItem.price = product.price;
-      orderItem.otherImages = product.otherImages;
-      orderItem.soldBy = product.soldBy;
-      orderItem.adminId = product.adminId;
-      orderItem.image = product.image;
-      orderItem.category = product.category;
-      orderItem.ratings = product.ratings;
-      orderItem.productId = product.productId;
-      orderItem.quantity = product.quantity;
-      orderItem.totalPrice = product.totalPrice;
+    cartItems.forEach(async (item) => {
+      let { totalPrice, productId, quantity } = item;
+      let { adminId } = await ProductModel.findById({ _id: productId });
+      let orderItem = await OrderModel.create({
+        userId,
+        productId,
+        adminId,
+        quantity,
+        totalPrice,
+        orderStatus: "Placed",
+      });
+      await AdminModel.findByIdAndUpdate(
+        { _id: adminId },
+        { $push: { orders: orderItem._id } }
+      );
 
-      orderItem.orderStatus = "Placed";
-      orderItem.save();
+      await UserModel.findByIdAndUpdate(
+        { _id: userId },
+        { $push: { orders: orderItem._id } }
+      );
+
       //   console.log(orderItem);
     });
     await CartModel.deleteMany({ userId });
@@ -43,7 +49,7 @@ orderRouter.get("/", async (req, res) => {
   let userId = req.body.authId;
 
   try {
-    let orders = await OrderModel.find({ userId });
+    let orders = await OrderModel.find({ userId }).populate(["productId"]);
 
     res.send({ data: orders, status: "success" });
   } catch (err) {
