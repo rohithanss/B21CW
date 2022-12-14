@@ -1,7 +1,7 @@
 const { Router } = require("express");
 
 const { ProductModel } = require("../models/ProductModel");
-const { WishlistModel } = require("../models/WishlistModel.js");
+const { WishlistModel } = require("../models/WishlistModel");
 const tokenValidator = require("../middlewares/tokenAuth");
 
 const wishlistRouter = Router();
