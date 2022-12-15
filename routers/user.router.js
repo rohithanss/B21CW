@@ -80,15 +80,13 @@ userRouter.use(tokenValidator);
 
 userRouter.get("/myprofile", async (req, res) => {
   try {
-    let profile = await UserModel.findOne({ _id: req.body.authId }).populate(
-      "cart"
-    );
+    let profile = await UserModel.findOne({ _id: req.body.authId });
+
     // await profile.cart[0].populate("productId");
 
     res.send({
       full_name: profile.name,
       email: profile.email,
-      data: profile.cart,
     });
   } catch (err) {
     console.log(err);
