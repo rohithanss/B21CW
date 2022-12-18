@@ -31,10 +31,13 @@ orderRouter.post("/place", async function (req, res) {
         { _id: adminId },
         { $push: { orders: orderItem._id } }
       );
-
+      console.log(mobile, address);
       await UserModel.findByIdAndUpdate(
         { _id: userId },
-        { $push: { orders: orderItem._id }, mobile, address }
+        {
+          $push: { orders: orderItem._id },
+          $set: { mobile: mobile, address: address },
+        }
       );
 
       //   console.log(orderItem);

@@ -83,7 +83,7 @@ userRouter.get("/myprofile", async (req, res) => {
     let profile = await UserModel.findOne({ _id: req.body.authId });
 
     // await profile.cart[0].populate("productId");
-
+    console.log(profile);
     res.send({
       full_name: profile.name,
       email: profile.email,
