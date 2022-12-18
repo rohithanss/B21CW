@@ -87,6 +87,9 @@ userRouter.get("/myprofile", async (req, res) => {
     res.send({
       full_name: profile.name,
       email: profile.email,
+      mobile: profile.mobile,
+      address: profile.address,
+      status: "success",
     });
   } catch (err) {
     console.log(err);

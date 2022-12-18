@@ -12,7 +12,8 @@ const orderRouter = Router();
 orderRouter.use(tokenValidator);
 orderRouter.post("/place", async function (req, res) {
   let userId = req.body.authId;
-
+  let mobile = req.body.mobile;
+  let address = req.body.address;
   try {
     let cartItems = await CartModel.find({ userId });
     cartItems.forEach(async (item) => {
@@ -33,7 +34,7 @@ orderRouter.post("/place", async function (req, res) {
 
       await UserModel.findByIdAndUpdate(
         { _id: userId },
-        { $push: { orders: orderItem._id } }
+        { $push: { orders: orderItem._id }, mobile, address }
       );
 
       //   console.log(orderItem);
